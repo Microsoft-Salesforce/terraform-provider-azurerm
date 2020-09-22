@@ -3,8 +3,7 @@ package location
 import (
 	"fmt"
 	"strings"
-
-	"github.com/terraform-providers/terraform-provider-azuread/azuread/helpers/validate"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/features"
 )
 
@@ -18,7 +17,7 @@ var enhancedEnabled = features.EnhancedValidationEnabled()
 // fall back to the original approach
 func EnhancedValidate(i interface{}, k string) ([]string, []error) {
 	if !enhancedEnabled || supportedLocations == nil {
-		return validate.NoEmptyStrings(i, k)
+		return validation.StringIsNotEmpty(i, k)
 	}
 
 	return enhancedValidation(i, k)
