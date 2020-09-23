@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2018-02-14/keyvault"
+	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
@@ -123,8 +123,8 @@ func resourceArmKeyVaultNetworkAclsCreateUpdate(d *schema.ResourceData, meta int
 		return fmt.Errorf("Error retrieving Key Vault %q (Resource Group %q): `properties` was nil", keyVaultName, resourceGroup)
 	}
 
-	//Generate a Resource ID for the ACL as Azure Resource manager doesn't maintain a Resource ID for this resource
-	resourceId := fmt.Sprintf("%s/aclId/rule", *keyVault.ID)
+	//Generate a Resource ID for the ACLs as Azure Resource manager doesn't maintain a Resource ID for this resource
+	resourceId := fmt.Sprintf("%s/aclsId/rule", *keyVault.ID)
 	update := keyvault.VaultPatchParameters{}
 
 	if update.Properties == nil {
@@ -154,7 +154,7 @@ func resourceArmKeyVaultNetworkAclsCreateUpdate(d *schema.ResourceData, meta int
 	update.Properties.NetworkAcls = networkAcls
 
 	if _, err := client.Update(ctx, resourceGroup, keyVaultName, update); err != nil {
-		return fmt.Errorf("Error Updating Azure Key Vault Network Acl %q (Resource Group %q): %+v", keyVaultName, resourceGroup, err)
+		return fmt.Errorf("Error Updating Azure Key Vault Network ACLs %q (Resource Group %q): %+v", keyVaultName, resourceGroup, err)
 	}
 
 	if d.IsNewResource() {
@@ -243,7 +243,7 @@ func resourceArmKeyVaultNetworkAclsDelete(d *schema.ResourceData, meta interface
 	}
 
 	if _, err := client.Update(ctx, resourceGroup, keyVaultName, update); err != nil {
-		return fmt.Errorf("Error deleting Azure Key Vault Network Acl %q (Resource Group %q): %+v", keyVaultName, resourceGroup, err)
+		return fmt.Errorf("Error deleting Azure Key Vault Network ACLs %q (Resource Group %q): %+v", keyVaultName, resourceGroup, err)
 	}
 
 	return nil

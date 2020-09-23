@@ -14,6 +14,8 @@ Manages a Key Vault.
 
 ~> **Note:** It's possible to define Key Vault Access Policies both within [the `azurerm_key_vault` resource](key_vault.html) via the `access_policy` block and by using [the `azurerm_key_vault_access_policy` resource](key_vault_access_policy.html). However it's not possible to use both methods to manage Access Policies within a KeyVault, since there'll be conflicts.
 
+~> **Note:** It's possible to define Key Vault Network ACL both within [the `azurerm_key_vault` resource](key_vault.html) via the `network_acls` block and by using [the `azurerm_key_vault_network_acls` resource](key_vault_network_acls.html). However it's not possible to use both methods to manage Access Policies within a KeyVault, since there'll be conflicts.
+
 ~> **Note:** Terraform will automatically recover a soft-deleted Key Vault during Creation if one is found - you can opt out of this using the `features` block within the Provider block.
 
 ## Example Usage
@@ -101,6 +103,8 @@ The following arguments are supported:
 * `enabled_for_template_deployment` - (Optional) Boolean flag to specify whether Azure Resource Manager is permitted to retrieve secrets from the key vault. Defaults to `false`.
 
 * `network_acls` - (Optional) A `network_acls` block as defined below.
+
+-> **NOTE** Since `network_acls` can be configured both inline and via the separate `azurerm_key_vault_network_acls` resource, we have to explicitly set it to empty slice (`[]`) to remove it.
 
 * `purge_protection_enabled` - (Optional) Is Purge Protection enabled for this Key Vault? Defaults to `false`.
 
