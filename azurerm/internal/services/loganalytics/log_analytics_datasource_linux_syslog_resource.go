@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/structure"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/set"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/suppress"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/tf"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/clients"
@@ -60,8 +59,10 @@ func resourceArmLogAnalyticsDataSourceLinuxSyslog() *schema.Resource {
 			},
 
 			"syslog_name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:             schema.TypeString,
+				Required:         true,
+				StateFunc:        state.IgnoreCase,
+				DiffSuppressFunc: suppress.CaseDifference,
 				ValidateFunc: validation.StringInSlice([]string{
 					"auth",
 					"authpriv",
@@ -69,18 +70,27 @@ func resourceArmLogAnalyticsDataSourceLinuxSyslog() *schema.Resource {
 					"daemon",
 					"ftp",
 					"kern",
+					"lpr",
+					"local0",
+					"local1",
+					"local2",
+					"local3",
+					"local4",
+					"local5",
+					"local6",
+					"local7",
 					"mail",
+					"news",
 					"syslog",
 					"user",
 					"uucp",
-				}, false),
+				}, true),
 			},
 
 			"syslog_severities": {
 				Type:     schema.TypeSet,
 				Required: true,
 				MinItems: 1,
-				Set:      set.HashStringIgnoreCase,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 					// API backend accepts event_types case-insensitively
@@ -115,7 +125,7 @@ func resourceArmLogAnalyticsDataSourceLinuxSyslogCreateUpdate(d *schema.Resource
 		resp, err := client.Get(ctx, resourceGroup, workspaceName, name)
 		if err != nil {
 			if !utils.ResponseWasNotFound(resp.Response) {
-				return fmt.Errorf("failed to check for existing Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
+				return fmt.Errorf("while checking for existing Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
 			}
 		}
 
@@ -133,16 +143,16 @@ func resourceArmLogAnalyticsDataSourceLinuxSyslogCreateUpdate(d *schema.Resource
 	}
 
 	if _, err := client.CreateOrUpdate(ctx, resourceGroup, workspaceName, name, params); err != nil {
-		return fmt.Errorf("failed to create Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
+		return fmt.Errorf("while creating Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
 	}
 
 	resp, err := client.Get(ctx, resourceGroup, workspaceName, name)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve Log Analytics DataSource Linux syslog %q (Resource Group %q): %+v", name, resourceGroup, err)
+		return fmt.Errorf("while retrieving Log Analytics DataSource Linux syslog %q (Resource Group %q): %+v", name, resourceGroup, err)
 	}
 
 	if resp.ID == nil || *resp.ID == "" {
-		return fmt.Errorf("Cannot read ID for Log Analytics DataSource Linux Syslog %q (Resource Group %q)", name, resourceGroup)
+		return fmt.Errorf("Unable to read ID for Log Analytics DataSource Linux Syslog %q (Resource Group %q)", name, resourceGroup)
 	}
 
 	d.SetId(*resp.ID)
@@ -168,7 +178,7 @@ func resourceArmLogAnalyticsDataSourceLinuxSyslogRead(d *schema.ResourceData, me
 			return nil
 		}
 
-		return fmt.Errorf("failed to retrieve Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+		return fmt.Errorf("while retrieving Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 	}
 
 	d.Set("name", resp.Name)
@@ -177,12 +187,12 @@ func resourceArmLogAnalyticsDataSourceLinuxSyslogRead(d *schema.ResourceData, me
 	if props := resp.Properties; props != nil {
 		propStr, err := structure.FlattenJsonToString(props.(map[string]interface{}))
 		if err != nil {
-			return fmt.Errorf("failed to flatten properties map to json for Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+			return fmt.Errorf("while flattening properties map to json for Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 		}
 
 		prop := &dataSourceLinuxSysLogProperty{}
 		if err := json.Unmarshal([]byte(propStr), &prop); err != nil {
-			return fmt.Errorf("failed to decode properties json for Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+			return fmt.Errorf("while decoding properties json for Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 		}
 
 		d.Set("syslog_name", prop.SysLogName)
@@ -203,7 +213,7 @@ func resourceArmLogAnalyticsDataSourceLinuxSyslogDelete(d *schema.ResourceData, 
 	}
 
 	if _, err := client.Delete(ctx, id.ResourceGroup, id.Workspace, id.Name); err != nil {
-		return fmt.Errorf("failed to delete Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+		return fmt.Errorf("while deleting Log Analytics DataSource Linux syslog %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 	}
 
 	return nil
@@ -211,6 +221,9 @@ func resourceArmLogAnalyticsDataSourceLinuxSyslogDelete(d *schema.ResourceData, 
 
 func expandLogAnalyticsDataSourceLinuxSyslogSeverity(input []interface{}) []dataSourceLinuxSysLogSeverity {
 	output := []dataSourceLinuxSysLogSeverity{}
+	if input == nil {
+		return output
+	}
 	for _, severity := range input {
 		output = append(output, dataSourceLinuxSysLogSeverity{severity.(string)})
 	}
@@ -219,6 +232,9 @@ func expandLogAnalyticsDataSourceLinuxSyslogSeverity(input []interface{}) []data
 
 func flattenLogAnalyticsDataSourceLinuxSyslogSeverity(severities []dataSourceLinuxSysLogSeverity) []interface{} {
 	output := make([]interface{}, 0)
+	if severities == nil {
+		return output
+	}
 	for _, e := range severities {
 		output = append(output, e.Severity)
 	}

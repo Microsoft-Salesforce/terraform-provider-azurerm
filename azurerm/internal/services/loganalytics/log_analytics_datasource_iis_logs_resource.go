@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/preview/operationalinsights/mgmt/2020-03-01-preview/operationalinsights"
@@ -57,13 +58,9 @@ func resourceArmLogAnalyticsDataSourceIISLogs() *schema.Resource {
 				ValidateFunc:     ValidateAzureRmLogAnalyticsWorkspaceName,
 			},
 
-			"state": {
-				Type:     schema.TypeString,
+			"on_premise_enabled": {
+				Type:     schema.TypeBool,
 				Required: true,
-				ValidateFunc: validation.StringInSlice([]string{
-					"OnPremiseEnabled",
-					"OnPremiseDisabled",
-				}, true),
 			},
 		},
 	}
@@ -81,12 +78,19 @@ func resourceArmLogAnalyticsDataSourceIISLogsCreateUpdate(d *schema.ResourceData
 	name := d.Get("name").(string)
 	resourceGroup := d.Get("resource_group_name").(string)
 	workspaceName := d.Get("workspace_name").(string)
+	onPremiseState := "OnPremiseDisabled"
+
+	if v, ok := d.GetOk("on_premise_enabled"); ok {
+		if onPremiseEnabled := v.(bool); onPremiseEnabled {
+			onPremiseState = "OnPremiseEnabled"
+		}
+	}
 
 	if d.IsNewResource() {
 		resp, err := client.Get(ctx, resourceGroup, workspaceName, name)
 		if err != nil {
 			if !utils.ResponseWasNotFound(resp.Response) {
-				return fmt.Errorf("failed to check for existing Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
+				return fmt.Errorf("checking for existing Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
 			}
 		}
 
@@ -98,21 +102,21 @@ func resourceArmLogAnalyticsDataSourceIISLogsCreateUpdate(d *schema.ResourceData
 	params := operationalinsights.DataSource{
 		Kind: operationalinsights.IISLogs,
 		Properties: &dataSourceIISLogsProperty{
-			State: d.Get("state").(string),
+			State: onPremiseState,
 		},
 	}
 
 	if _, err := client.CreateOrUpdate(ctx, resourceGroup, workspaceName, name, params); err != nil {
-		return fmt.Errorf("failed to create Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
+		return fmt.Errorf("while creating Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
 	}
 
 	resp, err := client.Get(ctx, resourceGroup, workspaceName, name)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve Log Analytics DataSource IIS logs %q (Resource Group %q): %+v", name, resourceGroup, err)
+		return fmt.Errorf("while retrieving Log Analytics DataSource IIS logs %q (Resource Group %q): %+v", name, resourceGroup, err)
 	}
 
 	if resp.ID == nil || *resp.ID == "" {
-		return fmt.Errorf("Cannot read ID for Log Analytics DataSource IIS logs %q (Resource Group %q)", name, resourceGroup)
+		return fmt.Errorf("Unble to read ID for Log Analytics DataSource IIS logs %q (Resource Group %q)", name, resourceGroup)
 	}
 
 	d.SetId(*resp.ID)
@@ -138,7 +142,7 @@ func resourceArmLogAnalyticsDataSourceIISLogsRead(d *schema.ResourceData, meta i
 			return nil
 		}
 
-		return fmt.Errorf("failed to retrieve Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+		return fmt.Errorf("while retrieving Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 	}
 
 	d.Set("name", resp.Name)
@@ -147,15 +151,19 @@ func resourceArmLogAnalyticsDataSourceIISLogsRead(d *schema.ResourceData, meta i
 	if props := resp.Properties; props != nil {
 		propStr, err := structure.FlattenJsonToString(props.(map[string]interface{}))
 		if err != nil {
-			return fmt.Errorf("failed to flatten properties map to json for Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+			return fmt.Errorf("while flattening properties map to json for Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 		}
 
 		prop := &dataSourceIISLogsProperty{}
 		if err := json.Unmarshal([]byte(propStr), &prop); err != nil {
-			return fmt.Errorf("failed to decode properties json for Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+			return fmt.Errorf("while decoding properties json for Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 		}
 
-		d.Set("state", prop.State)
+		if strings.EqualFold(prop.State, "OnPremiseEnabled") {
+			d.Set("on_premise_enabled", true)
+		} else if strings.EqualFold(prop.State, "OnPremiseDisabled") {
+			d.Set("on_premise_enabled", false)
+		}
 	}
 
 	return nil
@@ -172,7 +180,7 @@ func resourceArmLogAnalyticsDataSourceIISLogsDelete(d *schema.ResourceData, meta
 	}
 
 	if _, err := client.Delete(ctx, id.ResourceGroup, id.Workspace, id.Name); err != nil {
-		return fmt.Errorf("failed to delete Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+		return fmt.Errorf("while deleting Log Analytics DataSource IIS logs %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 	}
 
 	return nil

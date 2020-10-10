@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/preview/operationalinsights/mgmt/2020-03-01-preview/operationalinsights"
@@ -57,13 +58,9 @@ func resourceArmLogAnalyticsDataSourceLinuxPerformanceCollection() *schema.Resou
 				ValidateFunc:     ValidateAzureRmLogAnalyticsWorkspaceName,
 			},
 
-			"state": {
-				Type:     schema.TypeString,
+			"enabled": {
+				Type:     schema.TypeBool,
 				Required: true,
-				ValidateFunc: validation.StringInSlice([]string{
-					"Enabled",
-					"Disabled",
-				}, true),
 			},
 		},
 	}
@@ -81,12 +78,19 @@ func resourceArmLogAnalyticsDataSourceLinuxPerformanceCollectionCreateUpdate(d *
 	name := d.Get("name").(string)
 	resourceGroup := d.Get("resource_group_name").(string)
 	workspaceName := d.Get("workspace_name").(string)
+	perfCollectionState := "Disabled"
+
+	if v, ok := d.GetOk("enabled"); ok {
+		if enabled := v.(bool); enabled {
+			perfCollectionState = "Enabled"
+		}
+	}
 
 	if d.IsNewResource() {
 		resp, err := client.Get(ctx, resourceGroup, workspaceName, name)
 		if err != nil {
 			if !utils.ResponseWasNotFound(resp.Response) {
-				return fmt.Errorf("failed to check for existing Log Analytics DataSource Linux performance %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
+				return fmt.Errorf("while checking for existing Log Analytics DataSource Linux performance %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
 			}
 		}
 
@@ -98,21 +102,21 @@ func resourceArmLogAnalyticsDataSourceLinuxPerformanceCollectionCreateUpdate(d *
 	params := operationalinsights.DataSource{
 		Kind: operationalinsights.LinuxPerformanceCollection,
 		Properties: &dataSourceLinuxPerformanceCollectionProperty{
-			State: d.Get("state").(string),
+			State: perfCollectionState,
 		},
 	}
 
 	if _, err := client.CreateOrUpdate(ctx, resourceGroup, workspaceName, name, params); err != nil {
-		return fmt.Errorf("failed to create Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
+		return fmt.Errorf("while creating Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", name, resourceGroup, workspaceName, err)
 	}
 
 	resp, err := client.Get(ctx, resourceGroup, workspaceName, name)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve Log Analytics DataSource Linux performance collection %q (Resource Group %q): %+v", name, resourceGroup, err)
+		return fmt.Errorf("while retrieving Log Analytics DataSource Linux performance collection %q (Resource Group %q): %+v", name, resourceGroup, err)
 	}
 
 	if resp.ID == nil || *resp.ID == "" {
-		return fmt.Errorf("Cannot read ID for Log Analytics DataSource Linux performance collection %q (Resource Group %q)", name, resourceGroup)
+		return fmt.Errorf("Unable to read ID for Log Analytics DataSource Linux performance collection %q (Resource Group %q)", name, resourceGroup)
 	}
 
 	d.SetId(*resp.ID)
@@ -138,7 +142,7 @@ func resourceArmLogAnalyticsDataSourceLinuxPerformanceCollectionRead(d *schema.R
 			return nil
 		}
 
-		return fmt.Errorf("failed to retrieve Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+		return fmt.Errorf("while retrieving Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 	}
 
 	d.Set("name", resp.Name)
@@ -147,15 +151,19 @@ func resourceArmLogAnalyticsDataSourceLinuxPerformanceCollectionRead(d *schema.R
 	if props := resp.Properties; props != nil {
 		propStr, err := structure.FlattenJsonToString(props.(map[string]interface{}))
 		if err != nil {
-			return fmt.Errorf("failed to flatten properties map to json for Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+			return fmt.Errorf("while flattening properties map to json for Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 		}
 
 		prop := &dataSourceLinuxPerformanceCollectionProperty{}
 		if err := json.Unmarshal([]byte(propStr), &prop); err != nil {
-			return fmt.Errorf("failed to decode properties json for Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+			return fmt.Errorf("while decoding properties json for Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 		}
 
-		d.Set("state", prop.State)
+		if strings.EqualFold(prop.State, "Enabled") {
+			d.Set("enabled", true)
+		} else if strings.EqualFold(prop.State, "Disabled") {
+			d.Set("enabled", false)
+		}
 	}
 
 	return nil
@@ -172,7 +180,7 @@ func resourceArmLogAnalyticsDataSourceLinuxPerformanceCollectionDelete(d *schema
 	}
 
 	if _, err := client.Delete(ctx, id.ResourceGroup, id.Workspace, id.Name); err != nil {
-		return fmt.Errorf("failed to delete Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
+		return fmt.Errorf("while deleting Log Analytics DataSource Linux performance collection %q (Resource Group %q / Workspace: %q): %+v", id.Name, id.ResourceGroup, id.Workspace, err)
 	}
 
 	return nil
