@@ -2,17 +2,18 @@ package tests
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/acceptance"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/clients"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
-	"testing"
 )
 
 func TestAccAzureADDiagnosticSettings_basic(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_settings", "test")
-	diagSettingName := data.RandomString
+	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_setting", "test")
+	diagSettingName := fmt.Sprintf(`acctest-diagstng-%d`, data.RandomInteger)
 	resource.ParallelTest(t, resource.TestCase{
 		Providers:    acceptance.SupportedProviders,
 		CheckDestroy: testAADDiagnosticsSettingsDestroy,
@@ -29,14 +30,14 @@ func TestAccAzureADDiagnosticSettings_basic(t *testing.T) {
 }
 
 func TestAccAzureADDiagnosticSettings_Complete(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_settings", "test")
-	diagSettingName := data.RandomString
+	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_setting", "test")
+	diagSettingName := fmt.Sprintf(`acctest-diagstng-%d`, data.RandomInteger)
 	resource.ParallelTest(t, resource.TestCase{
 		Providers:    acceptance.SupportedProviders,
 		CheckDestroy: testAADDiagnosticsSettingsDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAADDiagnosticSettings_complete(data, diagSettingName, 2, true, true, 3, true),
+				Config: testAADDiagnosticSettings_complete(data, diagSettingName),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckAccAzureADDiagnosticSettingsExists(data.ResourceName),
 				),
@@ -47,7 +48,7 @@ func TestAccAzureADDiagnosticSettings_Complete(t *testing.T) {
 }
 
 func TestAccAzureADDiagnosticSettings_logAnalyticsLog(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_settings", "test")
+	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_setting", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		Providers:    acceptance.SupportedProviders,
@@ -65,7 +66,7 @@ func TestAccAzureADDiagnosticSettings_logAnalyticsLog(t *testing.T) {
 }
 
 func TestAccAzureADDiagnosticSettings_eventHub(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_settings", "test")
+	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_setting", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		Providers:    acceptance.SupportedProviders,
@@ -83,14 +84,14 @@ func TestAccAzureADDiagnosticSettings_eventHub(t *testing.T) {
 }
 
 func TestAccAzureADDiagnosticSettings_update(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_settings", "test")
-	diagSettingName := data.RandomString
+	data := acceptance.BuildTestData(t, "azurerm_aad_diagnostic_setting", "test")
+	diagSettingName := fmt.Sprintf(`acctest-diagstng-%d`, data.RandomInteger)
 	resource.ParallelTest(t, resource.TestCase{
 		Providers:    acceptance.SupportedProviders,
 		CheckDestroy: testAADDiagnosticsSettingsDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAADDiagnosticSettings_complete(data, diagSettingName, 2, true, true, 3, true),
+				Config: testAADDiagnosticSettings_complete(data, diagSettingName),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckAccAzureADDiagnosticSettingsExists(data.ResourceName),
 				),
@@ -104,7 +105,7 @@ func TestAccAzureADDiagnosticSettings_update(t *testing.T) {
 			},
 			data.ImportStep(),
 			{
-				Config: testAADDiagnosticSettings_complete(data, diagSettingName, 2, true, true, 5, true),
+				Config: testAADDiagnosticSettings_complete(data, diagSettingName),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckAccAzureADDiagnosticSettingsExists(data.ResourceName),
 				),
@@ -143,7 +144,7 @@ func testAADDiagnosticsSettingsDestroy(s *terraform.State) error {
 	ctx := acceptance.AzureProvider.Meta().(*clients.Client).StopContext
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "azurerm_aad_diagnostic_settings" {
+		if rs.Type != "azurerm_aad_diagnostic_setting" {
 			continue
 		}
 
@@ -153,7 +154,6 @@ func testAADDiagnosticsSettingsDestroy(s *terraform.State) error {
 				return nil
 			}
 			return fmt.Errorf("Bad request for get AAD diagnostic settings %s: %v", diagSettingName, err)
-
 		}
 
 		return nil
@@ -166,50 +166,35 @@ func testAADDiagnosticSettings_basic(data acceptance.TestData, name string) stri
 	template := testAccAADDiagnosticSettings_template(data)
 	return fmt.Sprintf(`%s
 
-resource "azurerm_aad_diagnostic_settings" "test" {
+resource "azurerm_aad_diagnostic_setting" "test" {
   name                = "%s"
   storage_account_id  = azurerm_storage_account.test.id
   logs  {
-    category = "AuditLogs"
-    retention_policy {
-    retention_policy_days 	 = 2
-    retention_policy_enabled = true
-    }
-  }
-  logs  {
-  	category = "SignInLogs"
-  	retention_policy {
-  	  retention_policy_days 	= 3
-  	  retention_policy_enabled 	= true
-  	}
-  }
+	category 	= "NonInteractiveUserSignInLogs"
+	retention_policy {
+		retention_policy_enabled = true
+		retention_policy_days =30
+	  }
+}
 }
 `, template, name)
 }
 
 func testAADDiagnosticSettings_eventhub(data acceptance.TestData) string {
 	template := testAccAADDiagnosticSettings_template(data)
+
 	return fmt.Sprintf(`%s
-resource "azurerm_aad_diagnostic_settings" "test" {
+resource "azurerm_aad_diagnostic_setting" "test" {
   name                		= "acctestdiagsetng-%d"
   event_hub_name 			= azurerm_eventhub.test.name
   event_hub_auth_rule_id 	= "${azurerm_eventhub_namespace.test.id}/authorizationRules/RootManageSharedAccessKey"
-  
   logs  {
-  	category = "AuditLogs"
-  	retention_policy {
-  		retention_policy_days 		= 2
-  		retention_policy_enabled 	= true
-  	}
-  }
-  
-  logs  {
-  	category = "SignInLogs"
-  	retention_policy {
-  		retention_policy_days 		= 3
-  		retention_policy_enabled 	= true
-  	}
-  }
+	category 	= "ProvisioningLogs"
+	retention_policy {
+		retention_policy_enabled = true
+		retention_policy_days = 40
+	  }
+}
 }
 `, template, data.RandomInteger)
 }
@@ -218,60 +203,80 @@ func testAADDiagnosticSettings_law(data acceptance.TestData) string {
 	template := testAccAADDiagnosticSettings_template(data)
 	return fmt.Sprintf(`%s
 
-resource "azurerm_aad_diagnostic_settings" "test" {
-  name          	= "acctestdiagsetng-%d"
+resource "azurerm_aad_diagnostic_setting" "test" {
+  name          	= "acctest-diagsetng-%d"
   workspace_id 		= azurerm_log_analytics_workspace.test.id
-  
   logs  {
-  	category = "AuditLogs"
-  	retention_policy {
-  		retention_policy_days 		= 2
-  		retention_policy_enabled 	= true
-  	}
-  }
-  
-  logs  {
-  	category = "SignInLogs"
-  	retention_policy {
-  		retention_policy_days 		= 3
-  		retention_policy_enabled 	= true
-  	}
-  }
+	category 	= "ServicePrincipalSignInLogs"
+	retention_policy {
+		retention_policy_enabled = true
+		retention_policy_days = 50
+	  }
+}
 }
 `, template, data.RandomInteger)
 }
 
-func testAADDiagnosticSettings_complete(data acceptance.TestData, diagSettingName string, auditLogRetentionDays int, auditLogRetentionEnabled bool, signInLogEnabled bool, signInLogRetentionDays int, signInLogRetentionEnabled bool) string {
+func testAADDiagnosticSettings_complete(data acceptance.TestData, diagSettingName string) string {
 	template := testAccAADDiagnosticSettings_template(data)
 	return fmt.Sprintf(`%s
 	
-resource "azurerm_aad_diagnostic_settings" "test" {
+resource "azurerm_aad_diagnostic_setting" "test" {
   name                		= "%s"
   storage_account_id  		= azurerm_storage_account.test.id
   workspace_id 				= azurerm_log_analytics_workspace.test.id
   event_hub_name 			= azurerm_eventhub.test.name
   event_hub_auth_rule_id 	= "${azurerm_eventhub_namespace.test.id}/authorizationRules/RootManageSharedAccessKey"
-  
   logs  {
 	category = "AuditLogs"
-	  
-  	retention_policy {
-  		retention_policy_days 		= %d
-  		retention_policy_enabled 	= %t
-  	}
+	retention_policy {
+		retention_policy_enabled = true
+		retention_policy_days =10
+	  }
   }
   
   logs  {
-  	enabled 	= %t
-  	category 	= "SignInLogs"
-	  
+	  category 	= "SignInLogs"
 	  retention_policy {
-  		retention_policy_days 		= %d
-  		retention_policy_enabled 	= %t
-  	}
+		retention_policy_enabled = true
+		retention_policy_days =10
+	  }
   }
+
+  logs  {
+	category 	= "ManagedIdentitySignInLogs"
+	retention_policy {
+		retention_policy_enabled = true
+		retention_policy_days = 20
+	  }
+	}
+
+logs  {
+	category 	= "NonInteractiveUserSignInLogs"
+	retention_policy {
+		retention_policy_enabled = true
+		retention_policy_days =30
+	  }
 }
-`, template, diagSettingName, auditLogRetentionDays, auditLogRetentionEnabled, signInLogEnabled, signInLogRetentionDays, signInLogRetentionEnabled)
+
+logs  {
+	category 	= "ProvisioningLogs"
+	retention_policy {
+		retention_policy_enabled = true
+		retention_policy_days = 40
+	  }
+}
+
+logs  {
+	category 	= "ServicePrincipalSignInLogs"
+	retention_policy {
+		retention_policy_enabled = true
+		retention_policy_days = 50
+	  }
+}
+  
+}
+`, template, diagSettingName)
 }
 
 func testAccAADDiagnosticSettings_template(data acceptance.TestData) string {
@@ -286,7 +291,7 @@ resource "azurerm_resource_group" "test" {
 }
 
 resource "azurerm_log_analytics_workspace" "test" {
-  name                = "acctestLAW-%d"
+  name                = "acctest-law-%d"
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   sku                 = "PerGB2018"
@@ -294,7 +299,7 @@ resource "azurerm_log_analytics_workspace" "test" {
 }
 
 resource "azurerm_storage_account" "test" {
-  name                     = "stgacc%s"
+  name                     = "acctest%d"
   resource_group_name      = azurerm_resource_group.test.name
   location                 = azurerm_resource_group.test.location
   account_tier             = "Standard"
@@ -316,5 +321,5 @@ resource "azurerm_eventhub" "test" {
   partition_count     = 2
   message_retention   = 6
 }
-`, data.RandomInteger, data.Locations.Primary, data.RandomInteger, data.RandomString, data.RandomInteger, data.RandomInteger)
+`, data.RandomInteger, data.Locations.Primary, data.RandomInteger, data.RandomIntOfLength(8), data.RandomInteger, data.RandomInteger)
 }
