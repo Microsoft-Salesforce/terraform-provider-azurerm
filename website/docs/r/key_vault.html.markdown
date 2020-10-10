@@ -102,6 +102,8 @@ The following arguments are supported:
 
 * `enabled_for_template_deployment` - (Optional) Boolean flag to specify whether Azure Resource Manager is permitted to retrieve secrets from the key vault. Defaults to `false`.
 
+* `enable_rbac_authorization` - (Optional) Boolean flag to specify whether Azure Key Vault uses Role Based Access Control (RBAC) for authorization of data actions. Defaults to `false`.
+
 * `network_acls` - (Optional) A `network_acls` block as defined below.
 
 -> **NOTE** Since `network_acls` can be configured both inline and via the separate `azurerm_key_vault_network_acls` resource, we have to explicitly set it to empty slice (`[]`) to remove it.

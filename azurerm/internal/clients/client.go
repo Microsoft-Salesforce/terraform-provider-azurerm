@@ -31,6 +31,7 @@ import (
 	datafactory "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/datafactory/client"
 	datalake "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/datalake/client"
 	datashare "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/datashare/client"
+	desktopvirtualization "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/desktopvirtualization/client"
 	devspace "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/devspace/client"
 	devtestlabs "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/devtestlabs/client"
 	dns "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/dns/client"
@@ -77,6 +78,7 @@ import (
 	sentinel "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/sentinel/client"
 	serviceBus "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/servicebus/client"
 	serviceFabric "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/servicefabric/client"
+	serviceFabricMesh "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/servicefabricmesh/client"
 	signalr "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/signalr/client"
 	sql "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/sql/client"
 	storage "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/storage/client"
@@ -118,6 +120,7 @@ type Client struct {
 	DataFactory           *datafactory.Client
 	Datalake              *datalake.Client
 	DataShare             *datashare.Client
+	DesktopVirtualization *desktopvirtualization.Client
 	DevSpace              *devspace.Client
 	DevTestLabs           *devtestlabs.Client
 	Dns                   *dns.Client
@@ -164,6 +167,7 @@ type Client struct {
 	Sentinel              *sentinel.Client
 	ServiceBus            *serviceBus.Client
 	ServiceFabric         *serviceFabric.Client
+	ServiceFabricMesh     *serviceFabricMesh.Client
 	SignalR               *signalr.Client
 	Storage               *storage.Client
 	StreamAnalytics       *streamAnalytics.Client
@@ -206,6 +210,7 @@ func (client *Client) Build(ctx context.Context, o *common.ClientOptions) error 
 	client.DataFactory = datafactory.NewClient(o)
 	client.Datalake = datalake.NewClient(o)
 	client.DataShare = datashare.NewClient(o)
+	client.DesktopVirtualization = desktopvirtualization.NewClient(o)
 	client.DevSpace = devspace.NewClient(o)
 	client.DevTestLabs = devtestlabs.NewClient(o)
 	client.Dns = dns.NewClient(o)
@@ -252,6 +257,7 @@ func (client *Client) Build(ctx context.Context, o *common.ClientOptions) error 
 	client.Sentinel = sentinel.NewClient(o)
 	client.ServiceBus = serviceBus.NewClient(o)
 	client.ServiceFabric = serviceFabric.NewClient(o)
+	client.ServiceFabricMesh = serviceFabricMesh.NewClient(o)
 	client.SignalR = signalr.NewClient(o)
 	client.Sql = sql.NewClient(o)
 	client.Storage = storage.NewClient(o)
