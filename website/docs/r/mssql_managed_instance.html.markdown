@@ -44,7 +44,7 @@ resource "azurerm_subnet" "example" {
     name = "miDelegation"
 
     service_delegation {
-      name    = "Microsoft.Sql/managedInstances"
+      name = "Microsoft.Sql/managedInstances"
     }
   }
 }
@@ -73,57 +73,57 @@ resource "azurerm_subnet_route_table_association" "example" {
 }
 
 resource "azurerm_mssql_managed_instance" "dns" {
-  name                 = "sql-dns-partner-mi"
-  resource_group_name = azurerm_resource_group.example.name
-  location            = azurerm_resource_group.example.location
-  administrator_login = "demoReadUser"
+  name                         = "sql-dns-partner-mi"
+  resource_group_name          = azurerm_resource_group.example.name
+  location                     = azurerm_resource_group.example.location
+  administrator_login          = "demoReadUser"
   administrator_login_password = "ReadUserDemo@12345"
-  subnet_id = azurerm_subnet.example.id
+  subnet_id                    = azurerm_subnet.example.id
   identity {
     type = "SystemAssigned"
   }
-   sku {
-        capacity = 8
-        family = "Gen5"
-        name = "GP_Gen5"
-        tier = "GeneralPurpose"
-      }
-      license_type = "BasePrice"
-      collation =  "SQL_Latin1_General_CP1_CI_AS"
-      proxy_override = "Redirect"
-      storage_size_gb = 64
-      vcores = 8
-      public_data_endpoint_enabled = true
-      timezone_id = "UTC"
-      minimal_tls_version = "1.1"
+  sku {
+    capacity = 8
+    family   = "Gen5"
+    name     = "GP_Gen5"
+    tier     = "GeneralPurpose"
+  }
+  license_type                 = "BasePrice"
+  collation                    = "SQL_Latin1_General_CP1_CI_AS"
+  proxy_override               = "Redirect"
+  storage_size_gb              = 64
+  vcores                       = 8
+  public_data_endpoint_enabled = true
+  timezone_id                  = "UTC"
+  minimal_tls_version          = "1.1"
 }
 
 
 resource "azurerm_mssql_managed_instance" "example" {
-  name                 = "sql-mi"
-  resource_group_name = azurerm_resource_group.example.name
-  location            = azurerm_resource_group.example.location
-  administrator_login = "demoReadUser"
+  name                         = "sql-mi"
+  resource_group_name          = azurerm_resource_group.example.name
+  location                     = azurerm_resource_group.example.location
+  administrator_login          = "demoReadUser"
   administrator_login_password = "ReadUser@123456"
-  subnet_id = azurerm_subnet.example.id
+  subnet_id                    = azurerm_subnet.example.id
   identity {
     type = "SystemAssigned"
   }
-   sku {
-        capacity = 8
-        family = "Gen5"
-        name = "GP_Gen5"
-        tier = "GeneralPurpose"
-      }
-      license_type = "LicenseIncluded"
-      collation =  "SQL_Latin1_General_CP1_CI_AS"
-      proxy_override = "Redirect"
-      storage_size_gb = 64
-      vcores = 8
-      public_data_endpoint_enabled = false
-      timezone_id = "Central America Standard Time"
-      minimal_tls_version = "1.2"
-      dns_zone_partner = azurerm_mssql_managed_instance.dns.id
+  sku {
+    capacity = 8
+    family   = "Gen5"
+    name     = "GP_Gen5"
+    tier     = "GeneralPurpose"
+  }
+  license_type                 = "LicenseIncluded"
+  collation                    = "SQL_Latin1_General_CP1_CI_AS"
+  proxy_override               = "Redirect"
+  storage_size_gb              = 64
+  vcores                       = 8
+  public_data_endpoint_enabled = false
+  timezone_id                  = "Central America Standard Time"
+  minimal_tls_version          = "1.2"
+  dns_zone_partner             = azurerm_mssql_managed_instance.dns.id
 }
 ```
 
@@ -163,7 +163,7 @@ The following arguments are supported:
 
 * `source_managed_instance_id` - (Optional) The resource id of the source managed instance associated with create operation of this instance. Specified for `Restore` create mode. `restore_point_in_time` must be specified too. Changing this forces a new resource to be created.
 
-* `storage_size_gb` - (Optional) Storage size in GB. Minimum value: 32. Maximum value: 8192. Increments of 32 GB allowed only.
+* `storage_size_gb` - (Optional) Storage size in GB. Minimum value: 32. Maximum value: 16384. Increments of 32 GB allowed only.
 
 ~> **NOTE:** The storage account type (used to store backups) is not supported yet in Go-SDK. 
 
@@ -173,7 +173,7 @@ The following arguments are supported:
 
 ~> **NOTE:** The supported timezones can be found from the link [timezones](https://docs.microsoft.com/en-us/azure/azure-sql/managed-instance/timezones-overview)
 
-* `vcores` - (Optional) The number of vCores. Allowed values: 8, 16, 24, 32, 40, 64 and 80.
+* `vcores` - (Optional) The number of vCores. Allowed values: 4, 8, 16, 24, 32, 40, 64 and 80.
 
 * `sku` - (Optional) Managed instance SKU. The `sku` block is defined below.
 

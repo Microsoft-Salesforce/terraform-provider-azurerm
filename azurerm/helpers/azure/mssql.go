@@ -2,11 +2,12 @@ package azure
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/validate"
-	"net/url"
-	"strings"
 )
 
 // Your server name can contain only lowercase letters, numbers, and '-', but can't start or end with '-' or have more than 63 characters.
@@ -231,21 +232,19 @@ func GetSQLResourceParentId(id string) (*string, error) {
 		key := components[current]
 		value := components[current+1]
 
-		// Check key/value for empty strings.
-		if key == "" || value == "" {
-			return nil, fmt.Errorf("Key/Value cannot be empty strings. Key: '%s', Value: '%s'", key, value)
-		}
-
-		if key == "subscriptions" {
+		switch key {
+		case "subscriptions":
 			subscriptionID = value
-		} else if key == "resourceGroups" {
+		case "resourceGroups":
 			resourceGroup = value
-		} else if key == "providers" && value == "Microsoft.Sql" {
+		case "providers":
 			providers = value
-		} else if key == "managedInstances" {
+		case "managedInstances":
 			managedInstance = value
-		} else if key == "servers" {
+		case "servers":
 			server = value
+		default:
+			return nil, fmt.Errorf("Key/Value cannot be empty strings. Key: '%s', Value: '%s'", key, value)
 		}
 	}
 
@@ -257,6 +256,7 @@ func GetSQLResourceParentId(id string) (*string, error) {
 	var parentId = strings.Join(databaseParentComponents, "/")
 	return &parentId, nil
 }
+
 func ValidateLongTermRetentionPoliciesIsoFormat(i interface{}, k string) (_ []string, errors []error) {
 	if m, regexErrs := validate.RegExHelper(i, k, `^P[0-9]*[YMWD]`); !m {
 		return nil, append(regexErrs, fmt.Errorf(`%q has to be a valid Duration format, starting with "P" and ending with either of the letters "YMWD"`, k))

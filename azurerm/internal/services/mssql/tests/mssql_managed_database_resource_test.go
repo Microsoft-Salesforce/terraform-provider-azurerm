@@ -2,15 +2,15 @@ package tests
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/acceptance"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/clients"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
-	"net/http"
-	"testing"
-	"time"
 )
 
 func TestAccAzureRMMsSqlManagedDatabase_basic(t *testing.T) {
@@ -50,7 +50,6 @@ func TestAccAzureRMMsSqlManagedDatabase_requiresImport(t *testing.T) {
 		},
 	})
 }
-
 
 func TestAccAzureRMMsSqlManagedDatabase_updateCollation(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_mssql_managed_database", "test")
@@ -137,17 +136,16 @@ func TestAccAzureRMMsSqlManagedDatabase_createPITRMode(t *testing.T) {
 	})
 }
 
-
 func testAccAzureRMMsSqlManagedDatabase_basicTemplate(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedDatabase_basic(data, "SQL_Latin1_General_CP1_CI_AS", "Default", "SQL_Latin1_General_CP1_CI_AS")
+	return testAccAzureRMMsSqlManagedDatabase_basic(data, "SQL_Latin1_General_CP1_CI_AS", "SQL_Latin1_General_CP1_CI_AS")
 }
 
 func testAccAzureRMMsSqlManagedDatabase_UpdateCollation(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedDatabase_basic(data, "Estonian_100_CS_AS_SC_UTF8", "Default", "SQL_Latin1_General_CP1_CI_AS")
+	return testAccAzureRMMsSqlManagedDatabase_basic(data, "Estonian_100_CS_AS_SC_UTF8", "SQL_Latin1_General_CP1_CI_AS")
 }
 
 func testAccAzureRMMsSqlManagedDatabase_UpdateCatalogCollation(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedDatabase_basic(data, "SQL_Latin1_General_CP1_CI_AS", "Default", "DATABASE_DEFAULT")
+	return testAccAzureRMMsSqlManagedDatabase_basic(data, "SQL_Latin1_General_CP1_CI_AS", "DATABASE_DEFAULT")
 }
 
 func testCheckAzureRMMsSqlManagedDatabaseExists(resourceName string) resource.TestCheckFunc {
@@ -162,7 +160,12 @@ func testCheckAzureRMMsSqlManagedDatabaseExists(resourceName string) resource.Te
 
 		name := rs.Primary.Attributes["name"]
 		managedInstanceId := rs.Primary.Attributes["managed_instance_id"]
+
 		id, err := azure.ParseAzureResourceID(managedInstanceId)
+		if err != nil {
+			return err
+		}
+
 		managedInstanceName := id.Path["managedInstances"]
 		resourceGroup := id.ResourceGroup
 
@@ -171,7 +174,7 @@ func testCheckAzureRMMsSqlManagedDatabaseExists(resourceName string) resource.Te
 			return fmt.Errorf("Bad: Get on ManagedDatabase: %+v", err)
 		}
 
-		if resp.StatusCode == http.StatusNotFound {
+		if utils.ResponseWasNotFound(resp.Response) {
 			return fmt.Errorf("Bad: Managed database %q  (Managed Sql Instance %q, resource group: %q) does not exist", name, managedInstanceName, resourceGroup)
 		}
 
@@ -208,30 +211,28 @@ func testCheckAzureRMMsSqlManagedDatabaseDestroy(s *terraform.State) error {
 	return nil
 }
 
-
-func testAccAzureRMMsSqlManagedDatabase_basic(data acceptance.TestData, collation string, createMode string, catalogCollation string) string {
+func testAccAzureRMMsSqlManagedDatabase_basic(data acceptance.TestData, collation string, catalogCollation string) string {
 	template := testAccAzureRMMsSqlManagedDatabase_prepareDependencies(data)
-	return fmt.Sprintf(`
-%s
+	return fmt.Sprintf(`%s
 
 resource "azurerm_mssql_managed_database" "test" {
 	name                         = "acctest-db-%[2]d"
-	managed_instance_id          = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	collation					 = "%[3]s"
-	create_mode 				= "%[4]s"
-	catalog_collation           =  "%[5]s"
+	catalog_collation           =  "%[4]s"
   }
-`, template, data.RandomInteger, collation, createMode, catalogCollation)
+`, template, data.RandomInteger, collation, catalogCollation)
 }
 
 func testAccAzureRMMsSqlManagedDatabase_createPITRMode(data acceptance.TestData) string {
 	template := testAccAzureRMMsSqlManagedDatabase_prepareDependencies(data)
-	return fmt.Sprintf(`
-%s
+	return fmt.Sprintf(`%s
 
 resource "azurerm_mssql_managed_database" "pitr" {
 	name                         = "acctest-dbp-%d"
-	managed_instance_id          = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	create_mode 				= "PointInTimeRestore"
   	restore_point_in_time       = "%s"
   	source_database_id          =  azurerm_mssql_managed_database.test.id
@@ -240,98 +241,96 @@ resource "azurerm_mssql_managed_database" "pitr" {
 }
 
 func testAccAzureRMMssqlManagedDatabase_requiresImport(data acceptance.TestData) string {
-	template := testAccAzureRMMsSqlManagedDatabase_basic(data, "SQL_Latin1_General_CP1_CI_AS", "Default", "SQL_Latin1_General_CP1_CI_AS")
-	return fmt.Sprintf(`
-%s
+	template := testAccAzureRMMsSqlManagedDatabase_basic(data, "SQL_Latin1_General_CP1_CI_AS", "SQL_Latin1_General_CP1_CI_AS")
+	return fmt.Sprintf(`%s
 
 resource "azurerm_mssql_managed_database" "import" {
 	name                         = "acctest-db-%[2]d"
-	managed_instance_id          = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	collation					 = "%[3]s"
   }
 `, template, data.RandomInteger, "SQL_Latin1_General_CP1_CI_AS", "Default", "SQL_Latin1_General_CP1_CI_AS")
 }
 
-
 func testAccAzureRMMsSqlManagedDatabase_prepareDependencies(data acceptance.TestData) string {
-	return fmt.Sprintf(`
-	provider "azurerm" {
-	  features {}
-	}
-	
-	resource "azurerm_resource_group" "test" {
-	  name     = "acctestRG-%[1]d"
-	  location = "%[2]s"
-	}
-	
-	resource "azurerm_network_security_group" "test" {
-	  name                = "accTestNetworkSecurityGroup-%[1]d"
-	  location            = "%[2]s"
-	  resource_group_name = azurerm_resource_group.test.name
-	}
-	
-	resource "azurerm_virtual_network" "test" {
-	  name                = "acctest-%[1]d-network"
-	  resource_group_name = azurerm_resource_group.test.name
-	  location            = "%[2]s"
-	  address_space       = ["10.0.0.0/16"]
-	}
-	
-	resource "azurerm_subnet" "test" {
-	  name                 = "internal"
-	  virtual_network_name = azurerm_virtual_network.test.name
-	  resource_group_name  = azurerm_resource_group.test.name
-	  address_prefixes     = ["10.0.1.0/24"]
-	  delegation {
-		name = "miDelegation"
-		service_delegation {
-		  name = "Microsoft.Sql/managedInstances"
-		}
-	  }
-	}
-	
-	resource "azurerm_subnet_network_security_group_association" "test" {
-	  subnet_id                 = azurerm_subnet.test.id
-	  network_security_group_id = azurerm_network_security_group.test.id
-	}
-	
-	resource "azurerm_route_table" "test" {
-	  name                = "test-routetable-%[1]d"
-	  location            = azurerm_resource_group.test.location
-	  resource_group_name = azurerm_resource_group.test.name
-	  route {
-		name                   = "test"
-		address_prefix         = "10.100.0.0/14"
-		next_hop_type          = "VirtualAppliance"
-		next_hop_in_ip_address = "10.10.1.1"
-	  }
-	}
-	
-	resource "azurerm_subnet_route_table_association" "test" {
-	  subnet_id      = azurerm_subnet.test.id
-	  route_table_id = azurerm_route_table.test.id
-	}
-	
-	resource "azurerm_mssql_managed_instance" "test" {
-	  name                         = "acctest-mi-%[1]d"
-	  resource_group_name          = azurerm_resource_group.test.name
-	  location                     = azurerm_resource_group.test.location
-	  administrator_login          = "AcceptanceTestUser"
-	  administrator_login_password = "LengthyPassword@1234"
-	  subnet_id                    = azurerm_subnet.test.id
-	  identity {
-		type = "SystemAssigned"
-	  }
-	  sku {
-		capacity = 8
-		family   = "Gen5"
-		name     = "GP_Gen5"
-		tier     = "GeneralPurpose"
-	  }
-	  depends_on = [
-		azurerm_subnet_network_security_group_association.test,
-		azurerm_subnet_route_table_association.test,
-	  ]
-	}
+	return fmt.Sprintf(`provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-%[1]d"
+  location = "%[2]s"
+}
+
+resource "azurerm_network_security_group" "test" {
+  name                = "accTestNetworkSecurityGroup-%[1]d"
+  location            = "%[2]s"
+  resource_group_name = azurerm_resource_group.test.name
+}
+
+resource "azurerm_virtual_network" "test" {
+  name                = "acctest-%[1]d-network"
+  resource_group_name = azurerm_resource_group.test.name
+  location            = "%[2]s"
+  address_space       = ["10.0.0.0/16"]
+}
+
+resource "azurerm_subnet" "test" {
+  name                 = "internal"
+  virtual_network_name = azurerm_virtual_network.test.name
+  resource_group_name  = azurerm_resource_group.test.name
+  address_prefixes     = ["10.0.1.0/24"]
+  delegation {
+    name = "miDelegation"
+    service_delegation {
+      name = "Microsoft.Sql/managedInstances"
+    }
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "test" {
+  subnet_id                 = azurerm_subnet.test.id
+  network_security_group_id = azurerm_network_security_group.test.id
+}
+
+resource "azurerm_route_table" "test" {
+  name                = "test-routetable-%[1]d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  route {
+    name                   = "test"
+    address_prefix         = "10.100.0.0/14"
+    next_hop_type          = "VirtualAppliance"
+    next_hop_in_ip_address = "10.10.1.1"
+  }
+}
+
+resource "azurerm_subnet_route_table_association" "test" {
+  subnet_id      = azurerm_subnet.test.id
+  route_table_id = azurerm_route_table.test.id
+}
+
+resource "azurerm_mssql_managed_instance" "test" {
+  name                         = "acctest-mi-%[1]d"
+  resource_group_name          = azurerm_resource_group.test.name
+  location                     = azurerm_resource_group.test.location
+  administrator_login          = "AcceptanceTestUser"
+  administrator_login_password = "LengthyPassword@1234"
+  subnet_id                    = azurerm_subnet.test.id
+  identity {
+    type = "SystemAssigned"
+  }
+  sku {
+    capacity = 8
+    family   = "Gen5"
+    name     = "GP_Gen5"
+    tier     = "GeneralPurpose"
+  }
+  depends_on = [
+    azurerm_subnet_network_security_group_association.test,
+    azurerm_subnet_route_table_association.test,
+  ]
+}
 	`, data.RandomInteger, data.Locations.Primary)
 }

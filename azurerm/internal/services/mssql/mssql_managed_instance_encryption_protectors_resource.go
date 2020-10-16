@@ -33,25 +33,27 @@ func resourceArmMSSQLManagedInstanceEncryptionProtector() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"managed_instance_id": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ForceNew:     true,
-				DiffSuppressFunc: suppress.CaseDifference,
-				ValidateFunc: azure.ValidateResourceID,
-			},
 
-			"server_key_name": {
+			"managed_instance_name": {
 				Type:         schema.TypeString,
 				Required:     true,
 				ForceNew:     true,
-				DiffSuppressFunc: suppress.CaseDifference,
 				ValidateFunc: validation.StringIsNotEmpty,
 			},
 
+			"resource_group_name": azure.SchemaResourceGroupName(),
+
+			"server_key_name": {
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: suppress.CaseDifference,
+				ValidateFunc:     validation.StringIsNotEmpty,
+			},
+
 			"server_key_type": {
-				Type:         schema.TypeString,
-				Required:     true,
+				Type:     schema.TypeString,
+				Required: true,
 				ValidateFunc: validation.StringInSlice([]string{
 					string(sql.ServiceManaged),
 					string(sql.AzureKeyVault),
@@ -92,15 +94,8 @@ func resourceArmMSSQLManagedInstanceEncryptionProtectorCreateUpdate(d *schema.Re
 	ctx, cancel := timeouts.ForCreateUpdate(meta.(*clients.Client).StopContext, d)
 	defer cancel()
 
-	managedInstanceId := d.Get("managed_instance_id").(string)
-
-	id, err := azure.ParseAzureResourceID(managedInstanceId)
-	if err != nil {
-		return err
-	}
-
-	resGroup := id.ResourceGroup
-	managedInstanceName := id.Path["managedInstances"]
+	managedInstanceName := d.Get("managed_instance_name").(string)
+	resGroup := d.Get("resource_group_name").(string)
 
 	if _, err := managedInstanceClient.Get(ctx, resGroup, managedInstanceName); err != nil {
 		return fmt.Errorf("Error reading managed SQL instance %s: %v", managedInstanceName, err)
@@ -137,7 +132,6 @@ func resourceArmMSSQLManagedInstanceEncryptionProtectorCreateUpdate(d *schema.Re
 	d.SetId(*result.ID)
 
 	return resourceArmMSSQLManagedInstanceEncryptionProtectorRead(d, meta)
-
 }
 
 func resourceArmMSSQLManagedInstanceEncryptionProtectorRead(d *schema.ResourceData, meta interface{}) error {
@@ -158,12 +152,8 @@ func resourceArmMSSQLManagedInstanceEncryptionProtectorRead(d *schema.ResourceDa
 		return fmt.Errorf("Error reading managed instance %s encryption details (Resource Group %q): %+v", managedInstanceName, resGroup, err)
 	}
 
-	managedInstanceId, _ := azure.GetSQLResourceParentId(d.Id())
-	if err != nil {
-		return err
-	}
-
-	d.Set("managed_instance_id", managedInstanceId)
+	d.Set("managed_instance_name", managedInstanceName)
+	d.Set("resource_group_name", resGroup)
 	d.Set("name", resp.Name)
 	d.Set("type", resp.Type)
 	d.Set("kind", resp.Kind)
@@ -177,7 +167,7 @@ func resourceArmMSSQLManagedInstanceEncryptionProtectorRead(d *schema.ResourceDa
 	return nil
 }
 
-// Managed Instance Does not support encryption protector deletion. 
+// Managed Instance Does not support encryption protector deletion.
 // Therefore the destroy can default back to ServiceManaged Key encryption rather than to any BYOK TDE protector
 func resourceArmMSSQLManagedInstanceEncryptionProtectorResetToDefault(d *schema.ResourceData, meta interface{}) error {
 	encryptionClient := meta.(*clients.Client).MSSQL.ManagedInstanceEncryptionProtectorsClient

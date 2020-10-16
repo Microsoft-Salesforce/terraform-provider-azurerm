@@ -2,12 +2,13 @@ package tests
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/acceptance"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/clients"
-	"testing"
 )
 
 func TestAccAzureRMMsSqlManagedInstanceEncryption_keyEncryption(t *testing.T) {
@@ -38,7 +39,7 @@ func TestAccAzureRMMsSqlManagedInstanceEncryption_ServiceManagedEncryption(t *te
 		CheckDestroy: testCheckAzureRMMsSqlManagedInstanceEncryptionDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAzureRMMsSqlManagedInstanceEncryption_basic(data),
+				Config: testAccAzureRMMsSqlManagedInstanceEncryption_ServiceManaged(data),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckAzureRMMsSqlManagedInstanceEncryptionExists(data.ResourceName),
 				),
@@ -95,7 +96,6 @@ func TestAccAzureRMMsSqlManagedInstanceEncryption_update(t *testing.T) {
 					testCheckAzureRMMsSqlManagedInstanceEncryptionExists(data.ResourceName),
 				),
 			},
-
 		},
 	})
 }
@@ -143,7 +143,6 @@ func testCheckAzureRMMsSqlManagedInstanceEncryptionDestroy(s *terraform.State) e
 		resourceGroup := id.ResourceGroup
 
 		if resp, err := client.Get(ctx, resourceGroup, managedInstanceName); err != nil {
-			
 			if string(resp.ManagedInstanceEncryptionProtectorProperties.ServerKeyType) != "ServiceManaged" {
 				return fmt.Errorf("Get on managed instance key Client: %+v", err)
 			}
@@ -154,22 +153,22 @@ func testCheckAzureRMMsSqlManagedInstanceEncryptionDestroy(s *terraform.State) e
 	return nil
 }
 
-
 func testAccAzureRMMsSqlManagedInstanceEncryption_basic(data acceptance.TestData) string {
 	keyvaultName := "acctst-kv-" + data.RandomString
 	template := testAccAzureRMMsSqlManagedInstanceEncryption_prepareDependencies(data, keyvaultName)
-	return fmt.Sprintf(`
-%s
+	return fmt.Sprintf(`%s
 
 resource "azurerm_mssql_managed_instance_key" "test" {
 	key_name                          = "${azurerm_key_vault_key.test.name}_${azurerm_key_vault_key.test.name}_${azurerm_key_vault_key.test.version}"
-	managed_instance_id           = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	uri 					 = azurerm_key_vault_key.test.id
   }
 
   resource "azurerm_mssql_managed_instance_encryption_protector" "test" {
 	server_key_name                          = "${azurerm_key_vault_key.test.name}_${azurerm_key_vault_key.test.name}_${azurerm_key_vault_key.test.version}"
-	managed_instance_id           = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	server_key_type = "AzureKeyVault"
   }
 `, template)
@@ -178,12 +177,12 @@ resource "azurerm_mssql_managed_instance_key" "test" {
 func testAccAzureRMMsSqlManagedInstanceEncryption_ServiceManaged(data acceptance.TestData) string {
 	keyvaultName := "acctst-kv-" + data.RandomString
 	template := testAccAzureRMMsSqlManagedInstanceEncryption_prepareDependencies(data, keyvaultName)
-	return fmt.Sprintf(`
-%s
+	return fmt.Sprintf(`%s
 
   resource "azurerm_mssql_managed_instance_encryption_protector" "test" {
 	server_key_name                          = "ServiceManaged"
-	managed_instance_id           = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	server_key_type = "ServiceManaged"
   }
 `, template)
@@ -192,18 +191,19 @@ func testAccAzureRMMsSqlManagedInstanceEncryption_ServiceManaged(data acceptance
 func testAccAzureRMMsSqlManagedInstanceEncryption_update(data acceptance.TestData) string {
 	keyvaultName := "acctst-kv-" + data.RandomString
 	template := testAccAzureRMMsSqlManagedInstanceEncryption_prepareDependencies(data, keyvaultName)
-	return fmt.Sprintf(`
-%s
+	return fmt.Sprintf(`%s
 
 resource "azurerm_mssql_managed_instance_key" "test" {
 	key_name                          = "${azurerm_key_vault_key.test1.name}_${azurerm_key_vault_key.test1.name}_${azurerm_key_vault_key.test1.version}"
-	managed_instance_id           = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	uri 					 = azurerm_key_vault_key.test1.id
   }
 
   resource "azurerm_mssql_managed_instance_encryption_protector" "test" {
 	server_key_name                          = "${azurerm_key_vault_key.test.name}_${azurerm_key_vault_key.test.name}_${azurerm_key_vault_key.test.version}"
-	managed_instance_id           = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	server_key_type = "AzureKeyVault"
   }
 
@@ -212,21 +212,19 @@ resource "azurerm_mssql_managed_instance_key" "test" {
 
 func testAccAzureRMMssqlManagedInstanceEncryption_requiresImport(data acceptance.TestData) string {
 	template := testAccAzureRMMsSqlManagedInstanceEncryption_basic(data)
-	return fmt.Sprintf(`
-%s
+	return fmt.Sprintf(`%s
 
 resource "azurerm_mssql_managed_instance_encryption_protector" "import" {
 	server_key_name                    = "${azurerm_key_vault_key.test.name}_${azurerm_key_vault_key.test.name}_${azurerm_key_vault_key.test.version}"
-	managed_instance_id         = azurerm_mssql_managed_instance.test.id
+	managed_instance_name          = azurerm_mssql_managed_instance.test.name
+	resource_group_name				= azurerm_mssql_managed_instance.test.resource_group_name
 	server_key_type = "AzureKeyVault"
   }
 `, template)
 }
 
-
 func testAccAzureRMMsSqlManagedInstanceEncryption_prepareDependencies(data acceptance.TestData, keyvaultName string) string {
-	return fmt.Sprintf(`
-	provider "azurerm" {
+	return fmt.Sprintf(`provider "azurerm" {
 	  features {}
 	}
 

@@ -2,13 +2,13 @@ package tests
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/acceptance"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/clients"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
 
 func TestAccAzureRMMsSqlManagedInstance_basic(t *testing.T) {
@@ -100,7 +100,7 @@ func TestAccAzureRMMsSqlManagedInstance_updateSku(t *testing.T) {
 				Config: testAccAzureRMMsSqlManagedInstance_updateSku(data),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckAzureRMMsSqlManagedInstanceExists(data.ResourceName),
-					resource.TestCheckResourceAttr(data.ResourceName, "sku.0.capacity", "8"),
+					resource.TestCheckResourceAttr(data.ResourceName, "sku.0.capacity", "24"),
 					resource.TestCheckResourceAttr(data.ResourceName, "sku.0.family", "Gen5"),
 					resource.TestCheckResourceAttr(data.ResourceName, "sku.0.name", "BC_Gen5"),
 					resource.TestCheckResourceAttr(data.ResourceName, "sku.0.tier", "BusinessCritical"),
@@ -329,48 +329,47 @@ func TestAccAzureRMMsSqlManagedInstance_DnsZonePartner(t *testing.T) {
 }
 
 func testAccAzureRMMsSqlManagedInstance_basicTemplate(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateAdminCredentials(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin2", "LengthyPassword@4321", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin2", "LengthyPassword@4321", 16, "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateSku(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "BC_Gen5", "BusinessCritical", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 24, "BC_Gen5", "BusinessCritical", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateLicence(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "LicenseIncluded", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 32, "GP_Gen5", "GeneralPurpose", "LicenseIncluded", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateCollation(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "BasePrice", "Latin1_General_100_CS_AS_SC", "Redirect", 64, 8, "UTC", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "GP_Gen5", "GeneralPurpose", "BasePrice", "Latin1_General_100_CS_AS_SC", "Redirect", 64, 8, "UTC", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateProxyOverride(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Proxy", 64, 8, "UTC", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 16, "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Proxy", 64, 8, "UTC", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateStorageSize(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 128, 8, "UTC", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 32, "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 128, 8, "UTC", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateVcores(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 4, "UTC", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 24, "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 4, "UTC", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateTimeZone(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "India Standard Time", "1.1")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 24, "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "India Standard Time", "1.1")
 }
 
 func testAccAzureRMMsSqlManagedInstance_updateTlsVersion(data acceptance.TestData) string {
-	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "Gen5", "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.2")
+	return testAccAzureRMMsSqlManagedInstance_basic(data, "miadmin", "LengthyPassword@1234", 8, "GP_Gen5", "GeneralPurpose", "BasePrice", "SQL_Latin1_General_CP1_CI_AS", "Redirect", 64, 8, "UTC", "1.2")
 }
 
-func testAccAzureRMMsSqlManagedInstance_basic(data acceptance.TestData, adminLogin string, adminPassword string, skuCapacity int, skuFamily string, skuName string, skuTier string, licenseType string, collation string, proxyOverride string, storageSize int, vcores int, timeZoneId string, minTlsVersion string) string {
-	return fmt.Sprintf(`
-provider "azurerm" {
+func testAccAzureRMMsSqlManagedInstance_basic(data acceptance.TestData, adminLogin string, adminPassword string, skuCapacity int, skuName string, skuTier string, licenseType string, collation string, proxyOverride string, storageSize int, vcores int, timeZoneId string, minTlsVersion string) string {
+	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
 
@@ -439,30 +438,29 @@ resource "azurerm_mssql_managed_instance" "test" {
   }
   sku {
     capacity = %[5]d
-    family   = "%[6]s"
-    name     = "%[7]s"
-    tier     = "%[8]s"
+    family   = "Gen5"
+    name     = "%[6]s"
+    tier     = "%[7]s"
   }
-  license_type          = "%[9]s"
-  collation             = "%[10]s"
-  proxy_override        = "%[11]s"
-  storage_size_gb       = %[12]d
-  vcores                = %[13]d
+  license_type          = "%[8]s"
+  collation             = "%[9]s"
+  proxy_override        = "%[10]s"
+  storage_size_gb       = %[11]d
+  vcores                = %[12]d
   data_endpoint_enabled = true
-  timezone_id           = "%[14]s"
-  minimal_tls_version   = "%[15]s"
+  timezone_id           = "%[13]s"
+  minimal_tls_version   = "%[14]s"
   depends_on = [
 	azurerm_subnet_network_security_group_association.test,
     azurerm_subnet_route_table_association.test,
   ]
 }
-`, data.RandomInteger, data.Locations.Primary, adminLogin, adminPassword, skuCapacity, skuFamily, skuName, skuTier, licenseType, collation, proxyOverride, storageSize, vcores, timeZoneId, minTlsVersion)
+`, data.RandomInteger, data.Locations.Primary, adminLogin, adminPassword, skuCapacity, skuName, skuTier, licenseType, collation, proxyOverride, storageSize, vcores, timeZoneId, minTlsVersion)
 }
 
 func testAccAzureRMMsSqlManagedInstance_requiresImport(data acceptance.TestData) string {
 	template := testAccAzureRMMsSqlManagedInstance_basicTemplate(data)
-	return fmt.Sprintf(`
-%s
+	return fmt.Sprintf(`%s
 
 resource "azurerm_mssql_managed_instance" "import" {
   name                         = "acctest-mi-%[2]d"
@@ -475,7 +473,7 @@ resource "azurerm_mssql_managed_instance" "import" {
     type = "SystemAssigned"
   }
   sku {
-    capacity = 8
+    capacity = 16
     family   = "Gen5"
     name     = "GP_Gen5"
     tier     = "GeneralPurpose"
@@ -494,8 +492,7 @@ resource "azurerm_mssql_managed_instance" "import" {
 
 func testAccAzureRMMsSqlManagedInstance_DnsZonePartner(data acceptance.TestData) string {
 	template := testAccAzureRMMsSqlManagedInstance_basicTemplate(data)
-	return fmt.Sprintf(`
-%s
+	return fmt.Sprintf(`%s
 
 resource "azurerm_mssql_managed_instance" "dnspartner" {
   name                         = "acctest-mi-dns-%[2]d"
@@ -544,7 +541,7 @@ func testCheckAzureRMMsSqlManagedInstanceExists(resourceName string) resource.Te
 			return fmt.Errorf("Bad: Get on ManagedInstancesClient: %+v", err)
 		}
 
-		if resp.StatusCode == http.StatusNotFound {
+		if utils.ResponseWasNotFound(resp.Response) {
 			return fmt.Errorf("Bad: Managed Sql Instance %q (resource group: %q) does not exist", miName, resourceGroup)
 		}
 
@@ -569,7 +566,7 @@ func testCheckAzureRMMsSqlManagedInstanceDestroy(s *terraform.State) error {
 			return nil
 		}
 
-		if resp.StatusCode != http.StatusNotFound {
+		if !utils.ResponseWasNotFound(resp.Response) {
 			return fmt.Errorf("MsSql Elastic Pool still exists %s: %+v", miName, err)
 		}
 	}

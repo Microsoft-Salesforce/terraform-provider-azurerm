@@ -10,10 +10,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/suppress"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/tf"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/clients"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/tags"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/tf/suppress"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/timeouts"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
@@ -117,9 +117,9 @@ func resourceArmMSSQLManagedInstance() *schema.Resource {
 			},
 
 			"maintenance_configuration_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
 				ValidateFunc: azure.ValidateResourceID,
 			},
 
@@ -165,13 +165,13 @@ func resourceArmMSSQLManagedInstance() *schema.Resource {
 				ForceNew:         true,
 				DiffSuppressFunc: suppress.RFC3339Time,
 				ValidateFunc:     validation.IsRFC3339Time,
-				RequiredWith: []string{"restore_point_in_time", "source_managed_instance_id"},
+				RequiredWith:     []string{"restore_point_in_time", "source_managed_instance_id"},
 			},
 
 			"source_managed_instance_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
 				ValidateFunc: azure.ValidateResourceID,
 				RequiredWith: []string{"restore_point_in_time", "source_managed_instance_id"},
 			},
@@ -179,12 +179,12 @@ func resourceArmMSSQLManagedInstance() *schema.Resource {
 			"storage_size_gb": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				ValidateFunc: validation.IntBetween(32, 8192),
+				ValidateFunc: validation.IntBetween(32, 16384),
 			},
 
 			"subnet_id": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Required:     true,
 				ValidateFunc: azure.ValidateResourceID,
 			},
 
@@ -200,6 +200,7 @@ func resourceArmMSSQLManagedInstance() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 				ValidateFunc: validation.IntInSlice([]int{
+					4,
 					8,
 					16,
 					24,
@@ -226,8 +227,8 @@ func resourceArmMSSQLManagedInstance() *schema.Resource {
 							DiffSuppressFunc: suppress.CaseDifference,
 						},
 						"name": {
-							Type:             schema.TypeString,
-							Required:         true,
+							Type:     schema.TypeString,
+							Required: true,
 							ValidateFunc: validation.StringInSlice([]string{
 								"GP_Gen4",
 								"GP_Gen5",
@@ -345,7 +346,6 @@ func resourceArmMSSQLManagedInstanceCreateUpdate(d *schema.ResourceData, meta in
 		}
 
 		parameters.ManagedInstanceProperties.StorageSizeInGB = utils.Int32(int32(storageSize))
-
 	}
 
 	if v, exists := d.GetOk("vcores"); exists {
@@ -442,7 +442,6 @@ func resourceArmMSSQLManagedInstanceCreateUpdate(d *schema.ResourceData, meta in
 	d.SetId(*result.ID)
 
 	return resourceArmMSSQLManagedInstanceRead(d, meta)
-
 }
 
 func resourceArmMSSQLManagedInstanceRead(d *schema.ResourceData, meta interface{}) error {
